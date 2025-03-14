@@ -64,9 +64,9 @@ const PetListing = ({
                       {pet.area && <span>{pet.area}</span>}
                     </p>
                     {/* Thumbnail preview */}
-                    {pet.imageData && pet.imageData[0] && pet.imageData[0].length > 0 && (
+                    {pet.imageData && pet.imageData.length > 0 && (
                       <div className="mt-2 flex gap-1">
-                        {pet.imageData[0].slice(0, 3).map((imgData, idx) => (
+                        {pet.imageData.slice(0, 3).map((imgData, idx) => (
                           <img
                             key={idx}
                             src={`data:image/jpeg;base64,${arrayBufferToBase64(imgData)}`}
@@ -74,9 +74,9 @@ const PetListing = ({
                             className="w-10 h-10 object-cover rounded"
                           />
                         ))}
-                        {pet.imageData[0].length > 3 && (
+                        {pet.imageData.length > 3 && (
                           <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-600">
-                            +{pet.imageData[0].length - 3}
+                            +{pet.imageData.length - 3}
                           </div>
                         )}
                       </div>

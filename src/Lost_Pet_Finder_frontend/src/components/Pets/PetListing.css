@@ -1,0 +1,19 @@
+/* PetListing specific styles */
+.pet-listing {
+    /* Add specific styles here if needed, or you can use global styles */
+}
+
+.pet-listing-filters button {
+    margin-right: 0.5rem;
+}
+
+.pet-entry {
+    border: 1px solid #ddd;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.pet-entry:hover {
+    background-color: #f9f9f9;
+}
