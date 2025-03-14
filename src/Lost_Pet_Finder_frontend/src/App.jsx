@@ -236,17 +236,28 @@ function App() {
       setMessage('Please enter a pet ID to search');
       return;
     }
-
+  
     setLoading(true);
     setMessage('Retrieving pet information...');
-
+  
     try {
       const result = await Lost_Pet_Finder_backend.getPet(searchId);
-      console.log("Result from getPet:", result); // Keep this for debugging
-
-      if (result) { // Simply check if result exists (it's an optional value)
-        setSelectedPet(result);
-        setMessage('Pet information retrieved successfully');
+      console.log("Raw result from getPet:", result);
+      
+      if (result) {
+        // Fix: Check if the result is an array and extract the first item
+        const petData = Array.isArray(result) ? result[0] : result;
+        
+        console.log("Pet data extracted:", petData);
+        console.log("Date value:", petData?.date);
+        
+        if (petData) {
+          setSelectedPet(petData);
+          setMessage('Pet information retrieved successfully');
+        } else {
+          setMessage('Pet not found or data structure unexpected');
+          setSelectedPet(null);
+        }
       } else {
         setMessage('Pet not found');
         setSelectedPet(null);

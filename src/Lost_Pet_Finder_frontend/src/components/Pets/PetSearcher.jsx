@@ -48,7 +48,7 @@ const PetSearcher = ({
             <p><strong>Height:</strong> {selectedPet.height || 'Not specified'}</p>
             <p><strong>Location:</strong> {selectedPet.location || 'Not specified'}</p>
             <p><strong>Category:</strong> {selectedPet.category}</p>
-            <p><strong>Date:</strong> {formatDate(selectedPet.date)}</p>
+            <p><strong>Date:</strong> {selectedPet.date ? formatDate(selectedPet.date) : 'Not specified'}</p>
             <p><strong>Area:</strong> {selectedPet.area || 'Not specified'}</p>
           </div>
 
