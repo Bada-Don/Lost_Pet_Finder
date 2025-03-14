@@ -1,13 +1,16 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { arrayBufferToBase64, formatDate } from '../../utils/helpers';
+import MessageComponent from '../Messages/MessageComponent';
 
 const PetSearcher = ({
   searchId, setSearchId,
   handleGetPet, loading,
   message, selectedPet,
   renderPetImages, handleDeletePet,
-  loggedInUser
+  loggedInUser, onSendMessage, messages
 }) => {
+  const [showMessages, setShowMessages] = useState(false);
+
   return (
     <div>
       <div className="mt-6 p-4 border rounded bg-gray-50">
@@ -57,13 +60,37 @@ const PetSearcher = ({
             {renderPetImages(selectedPet)}
           </div>
 
-          {loggedInUser && (
-            <button
-              onClick={() => handleDeletePet(selectedPet.id)}
-              className="mt-3 bg-red-500 text-white py-1 px-3 rounded hover:bg-red-600 text-sm"
-            >
-              Delete This Pet Record
-            </button>
+          <div className="mt-4 flex gap-3">
+            {loggedInUser && (
+              <button
+                onClick={() => handleDeletePet(selectedPet.id)}
+                className="bg-red-500 text-white py-1 px-3 rounded hover:bg-red-600 text-sm"
+              >
+                Delete This Pet Record
+              </button>
+            )}
+            
+            {/* Only show contact button if the user is logged in and not the owner */}
+            {loggedInUser && selectedPet.owner.toString() !== loggedInUser.toString() && (
+              <button
+                onClick={() => setShowMessages(true)}
+                className="bg-blue-500 text-white py-1 px-3 rounded hover:bg-blue-600 text-sm"
+              >
+                Contact Owner
+              </button>
+            )}
+          </div>
+
+          {/* Messaging component */}
+          {showMessages && (
+            <MessageComponent
+              loggedInUser={loggedInUser}
+              petId={selectedPet.id}
+              petOwner={selectedPet.owner}
+              onClose={() => setShowMessages(false)}
+              onSendMessage={(content) => onSendMessage(selectedPet.id, selectedPet.owner, content)}
+              messages={messages}
+            />
           )}
         </div>
       )}

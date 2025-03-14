@@ -1,3 +1,4 @@
+// app-updated.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Lost_Pet_Finder_backend } from '../../declarations/Lost_Pet_Finder_backend'; // Adjust path if needed
 import { Principal } from '@dfinity/principal';
@@ -5,6 +6,8 @@ import AuthComponent from './components/Auth/AuthComponent';
 import PetForm from './components/Pets/PetForm';
 import PetListing from './components/Pets/PetListing';
 import PetSearcher from './components/Pets/PetSearcher';
+import InboxComponent from './components/Messages/InboxComponent.jsx'; // Import InboxComponent
+import MessageComponent from './components/Messages/MessageComponent.jsx'; // Ensure MessageComponent is correctly imported
 import { arrayBufferToBase64, formatDate, convertImageToBlob } from './utils/helpers';
 
 function App() {
@@ -36,6 +39,11 @@ function App() {
   const [selectedPet, setSelectedPet] = useState(null);
   const [searchId, setSearchId] = useState('');
 
+  // --- Messaging State ---
+  const [userMessages, setUserMessages] = useState([]);
+  const [petMessages, setPetMessages] = useState([]);
+  const [messagingLoading, setMessagingLoading] = useState(false);
+
   // --- UI State ---
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -45,6 +53,14 @@ function App() {
   useEffect(() => {
     fetchPets();
   }, [viewMode, loggedInUser]); // Refetch pets when viewMode or login status changes
+
+  useEffect(() => {
+    if (loggedInUser) {
+      fetchUserMessages();
+    } else {
+      setUserMessages([]); // Clear messages on logout
+    }
+  }, [loggedInUser]);
 
   // --- Authentication Handlers ---
   const handleRegister = async (e) => {
@@ -80,6 +96,7 @@ function App() {
         setUsername('');
         setPassword('');
         setEmail('');
+        fetchUserMessages(); // Fetch messages after login
       } else {
         setAuthMessage(result.err);
         setLoggedInUser(null);
@@ -95,6 +112,7 @@ function App() {
   const handleLogout = () => {
     setLoggedInUser(null);
     setAuthMessage('Logged out successfully.');
+    setUserMessages([]); // Clear messages on logout
   };
 
 
@@ -120,10 +138,10 @@ function App() {
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-  
+
     const selectedFiles = files.slice(0, 5); // Limit to 5 images
     setImageFiles(prevFiles => [...prevFiles, ...selectedFiles].slice(0, 5));
-  
+
     // Convert to data URLs instead of blob URLs
     selectedFiles.forEach(file => {
       const reader = new FileReader();
@@ -155,33 +173,33 @@ function App() {
 
       // Let's use a modified approach for images
       let imageBlobs = null; // Default to null if no images
-      
+
       if (imageFiles.length > 0) {
         setMessage('Processing images...');
         setDebug('Starting image processing');
-        
+
         try {
           // First convert files to readable arrays
           const imageArrays = [];
-          
+
           for (const file of imageFiles) {
             const arrayBuffer = await file.arrayBuffer();
             // Convert ArrayBuffer to Array of Numbers (Uint8Array -> Array)
             const uint8Array = new Uint8Array(arrayBuffer);
             const numbersArray = Array.from(uint8Array);
-            
+
             // Debug the size
             setDebug(prev => prev + `\nProcessed image of size: ${numbersArray.length} bytes`);
-            
+
             // Only store images smaller than 400KB to prevent overflow issues
             if (numbersArray.length > 400000) {
               setDebug(prev => prev + `\nImage too large (${numbersArray.length} bytes), skipping`);
               continue;
             }
-            
+
             imageArrays.push(numbersArray);
           }
-          
+
           // If we have any valid images, use them
           if (imageArrays.length > 0) {
             imageBlobs = [imageArrays]; // Must be wrapped in an outer array to match backend type
@@ -236,21 +254,21 @@ function App() {
       setMessage('Please enter a pet ID to search');
       return;
     }
-  
+
     setLoading(true);
     setMessage('Retrieving pet information...');
-  
+
     try {
       const result = await Lost_Pet_Finder_backend.getPet(searchId);
       console.log("Raw result from getPet:", result);
-      
+
       if (result) {
         // Fix: Check if the result is an array and extract the first item
         const petData = Array.isArray(result) ? result[0] : result;
-        
+
         console.log("Pet data extracted:", petData);
         console.log("Date value:", petData?.date);
-        
+
         if (petData) {
           setSelectedPet(petData);
           setMessage('Pet information retrieved successfully');
@@ -319,12 +337,92 @@ function App() {
     }
   };
 
+  // --- Messaging Handlers ---
+  const fetchUserMessages = async () => {
+    if (!loggedInUser) return; // Do not fetch if not logged in
+    setMessagingLoading(true);
+    try {
+      const messages = await Lost_Pet_Finder_backend.getUserMessages();
+      setUserMessages(messages.map(msg => ({
+        ...msg,
+        contactName: msg.isSent ? 'To User' : 'From User' // Placeholder, improve this with actual usernames if available
+      })));
+    } catch (error) {
+      setMessage(`Error fetching messages: ${error.message || error}`);
+    } finally {
+      setMessagingLoading(false);
+    }
+  };
+
+  const fetchPetMessages = async (petId, petOwner) => {
+    if (!loggedInUser || !petId || !petOwner) return;
+    setMessagingLoading(true);
+    try {
+      const messages = await Lost_Pet_Finder_backend.getMessagesForPet(petId);
+      setPetMessages(messages);
+    } catch (error) {
+      setMessage(`Error fetching pet messages: ${error.message || error}`);
+    } finally {
+      setMessagingLoading(false);
+    }
+  };
+
+
+  const handleSendMessage = async (petId, toUserPrincipal, content) => {
+    if (!loggedInUser) {
+      setMessage('Please log in to send messages.');
+      return;
+    }
+    setMessagingLoading(true);
+    try {
+      const result = await Lost_Pet_Finder_backend.sendMessage({
+        petId: petId,
+        toUser: Principal.fromText(toUserPrincipal), // Ensure toUser is Principal
+        content: content,
+      });
+      if ('ok' in result) {
+        setMessage('Message sent successfully!');
+        fetchPetMessages(petId, toUserPrincipal); // Refresh pet messages after sending
+        fetchUserMessages(); // Refresh user inbox as well
+      } else {
+        setMessage(`Failed to send message: ${result.err}`);
+      }
+    } catch (error) {
+      setMessage(`Error sending message: ${error.message || error}`);
+    } finally {
+      setMessagingLoading(false);
+    }
+  };
+
+  const handleMarkAsRead = async (messageId) => {
+    setMessagingLoading(true);
+    try {
+      const result = await Lost_Pet_Finder_backend.markMessageAsRead(messageId);
+      if ('ok' in result) {
+        setMessage(result.ok);
+        fetchUserMessages(); // Refresh messages to update read status
+      } else {
+        setMessage(`Failed to mark as read: ${result.err}`);
+      }
+    } catch (error) {
+      setMessage(`Error marking as read: ${error.message || error}`);
+    } finally {
+      setMessagingLoading(false);
+    }
+  };
+
+  const handleViewPetFromInbox = (petId) => {
+    setSearchId(petId);
+    handleGetPet(); // Automatically fetch and display pet details
+  };
+
+
   // --- Rendering Helper Functions ---
   const renderPetImages = (pet) => {
     if (!pet.imageData || !pet.imageData.length || !pet.imageData[0] || pet.imageData[0].length === 0) {
       return <p className="text-gray-500 text-sm">No images available</p>;
     }
-  
+
     return (
       <div className="flex flex-wrap gap-2 mt-2">
         {pet.imageData[0].map((imgData, idx) => (
@@ -387,19 +485,39 @@ function App() {
         />
       </div>
 
-      {/* Pet Searcher - outside grid for full width */}
-      <PetSearcher
-        searchId={searchId} setSearchId={setSearchId}
-        handleGetPet={handleGetPet} loading={loading}
-        message={message} selectedPet={selectedPet}
-        renderPetImages={renderPetImages}
-        handleDeletePet={handleDeletePet}
-        loggedInUser={loggedInUser} // Pass loggedInUser for conditional delete button
-      />
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Inbox Component */}
+        {loggedInUser && (
+          <InboxComponent
+            messages={userMessages}
+            onViewPet={handleViewPetFromInbox}
+            onMarkAsRead={handleMarkAsRead}
+            loading={messagingLoading}
+          />
+        )}
+
+        {/* Pet Searcher - outside grid for full width */}
+        <PetSearcher
+          searchId={searchId} setSearchId={setSearchId}
+          handleGetPet={handleGetPet} loading={loading}
+          message={message} selectedPet={selectedPet}
+          renderPetImages={renderPetImages}
+          handleDeletePet={handleDeletePet}
+          loggedInUser={loggedInUser} // Pass loggedInUser for conditional delete button
+          onSendMessage={handleSendMessage}
+          messages={petMessages} // Pass petMessages to PetSearcher -> MessageComponent
+        />
+      </div>
+
 
       {message && !selectedPet && ( // Show general messages when not viewing a selected pet
         <div className={`mt-6 p-3 rounded ${message.includes('successfully') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
           {message}
+        </div>
+      )}
+      {debug && (
+        <div className="mt-4 p-2 border rounded bg-gray-100 overflow-x-auto">
+          <pre className="text-xs">{debug}</pre>
         </div>
       )}
     </div>
