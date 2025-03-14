@@ -6,6 +6,9 @@ import Debug "mo:base/Debug";
 import Principal "mo:base/Principal";
 import Array "mo:base/Array";
 import Time "mo:base/Time";
+import Nat "mo:base/Nat";
+import Nat32 "mo:base/Nat32";
+import Int "mo:base/Int";
 
 actor {
   // Define the Pet type
@@ -24,6 +27,7 @@ actor {
 
   // Use stable variables to persist state
   stable var petEntries : [(Text, Pet)] = [];
+  stable var nextId : Nat = 1;
 
   // Create a new HashMap and initialize it with the stable entries
   var petStore = HashMap.HashMap<Text, Pet>(
@@ -47,9 +51,42 @@ actor {
     petEntries := [];  // Clear after restoration
   };
 
-  // Function to add a new pet entry
-  public shared(msg) func addPet(pet: Pet) : async () {
-    petStore.put(pet.id, pet);
+  // Function to generate a new unique ID
+  private func generateId() : Text {
+    let id = Int.toText(nextId);
+    nextId += 1;
+    return id;
+  };
+
+  // Modified function to add a new pet entry with auto-generated ID
+  public shared(msg) func addPet(petInput: {
+    name: Text;
+    petType: Text;
+    breed: Text;
+    color: Text;
+    height: Text;
+    location: Text;
+    category: Text;
+    date: Text;
+    area: Text;
+  }) : async Text {
+    let id = generateId();
+    
+    let pet: Pet = {
+      id = id;
+      name = petInput.name;
+      petType = petInput.petType;
+      breed = petInput.breed;
+      color = petInput.color;
+      height = petInput.height;
+      location = petInput.location;
+      category = petInput.category;
+      date = petInput.date;
+      area = petInput.area;
+    };
+    
+    petStore.put(id, pet);
+    return id;
   };
 
   // Function to get a pet by ID
@@ -78,9 +115,9 @@ actor {
     Array.filter<Pet>(pets, func(pet) { pet.category == category });
   };
   
-  // Function to get all pets in a specific area
+  // Function to get pets in a specific area
   public query func getPetsByArea(area: Text) : async [Pet] {
     let pets = Iter.toArray(petStore.vals());
     Array.filter<Pet>(pets, func(pet) { pet.area == area });
   };
-};
+}
