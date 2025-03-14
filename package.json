@@ -14,5 +14,8 @@
   "type": "module",
   "workspaces": [
     "src/Lost_Pet_Finder_frontend"
-  ]
+  ],
+  "devDependencies": {
+    "vite": "^6.2.2"
+  }
 }
