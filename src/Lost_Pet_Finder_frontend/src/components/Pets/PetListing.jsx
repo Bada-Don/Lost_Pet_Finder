@@ -1,5 +1,5 @@
 import React from 'react';
-import { arrayBufferToBase64, formatDate } from '/home/harsh/Projects/Lost_Pet_Finder/src/Lost_Pet_Finder_frontend/src/utils/helpers.js';
+import { arrayBufferToBase64, formatDate } from '../../utils/helpers';
 
 const PetListing = ({
   allPets,
