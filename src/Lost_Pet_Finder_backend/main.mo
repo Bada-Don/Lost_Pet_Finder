@@ -42,13 +42,19 @@ actor {
     User.loginUser(username, passwordHash, userStore)
   };
 
-  // --- ADD THIS getAllPets FUNCTION BELOW, INSIDE THE ACTOR BLOCK ---
   public shared func getAllPets() : async [(Text, Pet.Pet)] {
     Iter.toArray(petStore.entries());
   };
-  // --- MAKE SURE IT'S INSIDE THE `actor { ... }` BLOCK ---
 
-  public shared func getPet(id: Text) : async ?Pet.Pet { // Return type is now Option<Pet.Pet>
-    petStore.get(id); // HashMap's `get` method returns Option<Value> which is ?Pet.Pet in this case
+  public shared func getPetsByCategory(category: Text) : async [(Text, Pet.Pet)] {
+    let filteredPets = Array.filter<(Text, Pet.Pet)>(Iter.toArray(petStore.entries()), func(entry: (Text, Pet.Pet)): Bool {
+      let pet = entry.1;
+      pet.category == category
+    });
+    return filteredPets;
+  };
+
+  public shared func getPet(id: Text) : async ?Pet.Pet {
+    petStore.get(id);
   };
 };

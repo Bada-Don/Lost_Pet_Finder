@@ -144,7 +144,7 @@ const PetForm = ({
           <button
             type="button"
             onClick={clearForm}
-            className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
+            className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700 disabled:opacity-50 "
           >
             Clear Form
           </button>
