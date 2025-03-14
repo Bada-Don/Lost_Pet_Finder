@@ -2,121 +2,438 @@ import React, { useState, useEffect } from 'react';
 import { Lost_Pet_Finder_backend } from '../../declarations/Lost_Pet_Finder_backend';
 
 function App() {
-  const [key, setKey] = useState('');
-  const [value, setValue] = useState('');
-  const [retrievedValue, setRetrievedValue] = useState('');
+  // State for pet form fields
+  const [petId, setPetId] = useState('');
+  const [petName, setPetName] = useState('');
+  const [petType, setPetType] = useState('');
+  const [breed, setBreed] = useState('');
+  const [color, setColor] = useState('');
+  const [height, setHeight] = useState('');
+  const [location, setLocation] = useState('');
+  const [category, setCategory] = useState('Lost');
+  const [date, setDate] = useState('');
+  const [area, setArea] = useState('');
+
+  // State for UI management
   const [message, setMessage] = useState('');
-  const [allEntries, setAllEntries] = useState([]); // State for all entries
+  const [allPets, setAllPets] = useState([]); 
+  const [viewMode, setViewMode] = useState('all'); // 'all', 'lost', 'found'
+  const [selectedPet, setSelectedPet] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  // Fetch all entries on component mount
+  // Fetch all pets on component mount
   useEffect(() => {
-    fetchAllEntries();
-  }, []);
+    fetchPets();
+  }, [viewMode]);
 
-  const handleSet = async () => {
-    setMessage('Setting...');
-    try {
-      await Lost_Pet_Finder_backend.set(key, value);
-      setMessage('Key-value pair set successfully!');
-      setKey('');
-      setValue('');
-      fetchAllEntries(); // Refresh the list after setting
-    } catch (error) {
-      setMessage(`Error setting key-value pair: ${error}`);
-    }
+  const clearForm = () => {
+    setPetId('');
+    setPetName('');
+    setPetType('');
+    setBreed('');
+    setColor('');
+    setHeight('');
+    setLocation('');
+    setCategory('Lost');
+    setDate('');
+    setArea('');
   };
 
-  const handleGet = async () => {
-    setMessage('Retrieving...');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('Saving pet information...');
+    
     try {
-      const result = await Lost_Pet_Finder_backend.get(key);
-      if (result === null) {
-        setRetrievedValue('Key not found');
-      } else {
-        setRetrievedValue(result);
+      // Validate required fields
+      if (!petId || !petName || !category) {
+        setMessage('ID, Name, and Category are required fields');
+        setLoading(false);
+        return;
       }
-      setMessage('');
+      
+      // Create pet object
+      const pet = {
+        id: petId,
+        name: petName,
+        petType: petType,
+        breed: breed,
+        color: color,
+        height: height,
+        location: location,
+        category: category,
+        date: date,
+        area: area
+      };
+      
+      // Check if pet ID already exists
+      const exists = await Lost_Pet_Finder_backend.petExists(petId);
+      if (exists) {
+        setMessage(`Pet with ID ${petId} already exists!`);
+        setLoading(false);
+        return;
+      }
+      
+      await Lost_Pet_Finder_backend.addPet(pet);
+      setMessage('Pet information saved successfully!');
+      clearForm();
+      fetchPets();
     } catch (error) {
-      setMessage(`Error retrieving value: ${error}`);
+      setMessage(`Error saving pet information: ${error}`);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDelete = async () => {
-    setMessage('Deleting...');
+  const handleGetPet = async () => {
+    if (!petId) {
+      setMessage('Please enter a pet ID');
+      return;
+    }
+    
+    setLoading(true);
+    setMessage('Retrieving pet information...');
+    
     try {
-      await Lost_Pet_Finder_backend.delete(key);
-      setMessage('Key-value pair deleted successfully!');
-      setKey('');
-      fetchAllEntries(); // Refresh after deletion
+      const result = await Lost_Pet_Finder_backend.getPet(petId);
+      
+      // Check if result is null or undefined
+      if (!result || result.length === 0) {
+        setMessage('Pet not found');
+        setSelectedPet(null);
+      } else {
+        // The result is an optional type in Motoko, which gets translated to the actual value in JS
+        setSelectedPet(result);
+        setMessage('Pet information retrieved successfully');
+      }
     } catch (error) {
-      setMessage(`Error deleting key-value pair: ${error}`);
+      setMessage(`Error retrieving pet information: ${error}`);
+      setSelectedPet(null);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const fetchAllEntries = async () => {
+  const handleDeletePet = async (id) => {
+    if (!id) {
+      setMessage('Please enter a pet ID to delete');
+      return;
+    }
+    
+    if (!window.confirm(`Are you sure you want to delete pet with ID ${id}?`)) {
+      return;
+    }
+    
+    setLoading(true);
+    setMessage('Deleting pet information...');
+    
     try {
-      const entries = await Lost_Pet_Finder_backend.getAll();
-      setAllEntries(entries);
+      await Lost_Pet_Finder_backend.deletePet(id);
+      setMessage('Pet information deleted successfully!');
+      setSelectedPet(null);
+      fetchPets();
     } catch (error) {
-      setMessage(`Error fetching all entries: ${error}`);
+      setMessage(`Error deleting pet information: ${error}`);
+    } finally {
+      setLoading(false);
     }
   };
 
-    const handleContainsKey = async () => {
-        setMessage('Checking...');
-        try{
-            const contains = await Lost_Pet_Finder_backend.containsKey(key);
-            if(contains) {
-                setMessage(`Key ${key} found!`);
-            }
-            else{
-                setMessage(`Key ${key} not found!`);
-            }
-        }
-        catch(error){
-            setMessage(`Error checking if map contains key: ${error}`);
-        }
-    };
+  const fetchPets = async () => {
+    setLoading(true);
+    try {
+      let pets = [];
+      
+      if (viewMode === 'lost') {
+        const lostPets = await Lost_Pet_Finder_backend.getPetsByCategory('Lost');
+        pets = lostPets.map(pet => [pet.id, pet]);
+      } else if (viewMode === 'found') {
+        const foundPets = await Lost_Pet_Finder_backend.getPetsByCategory('Found');
+        pets = foundPets.map(pet => [pet.id, pet]);
+      } else {
+        // Default: all pets
+        pets = await Lost_Pet_Finder_backend.getAllPets();
+      }
+      
+      setAllPets(pets);
+    } catch (error) {
+      setMessage(`Error fetching pets: ${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'Not specified';
+    return dateStr;
+  };
+
+  // For debugging - log the selectedPet object to console when it changes
+  useEffect(() => {
+    if (selectedPet) {
+      console.log("Selected Pet:", selectedPet);
+    }
+  }, [selectedPet]);
 
   return (
-    <div>
-      <h1>Key-Value Store</h1>
-
-      <div>
-        <label>Key:</label>
-        <input type="text" value={key} onChange={(e) => setKey(e.target.value)} />
-      </div>
-
-      <div>
-        <label>Value:</label>
-        <input type="text" value={value} onChange={(e) => setValue(e.target.value)} />
-      </div>
-
-      <button onClick={handleSet}>Set Key-Value</button>
-      <button onClick={handleGet}>Get Value</button>
-      <button onClick={handleDelete}>Delete Key</button>
-      <button onClick={handleContainsKey}>Contains Key?</button>
-
-
-      {message && <p>{message}</p>}
-
-      {retrievedValue && (
-        <div>
-          <h2>Retrieved Value:</h2>
-          <p>{retrievedValue}</p>
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-6 text-center">Lost & Found Pet Finder</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Pet Entry Form */}
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold mb-4">Register a Pet</h2>
+          
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">Pet ID (Unique)*</label>
+                <input 
+                  type="text" 
+                  value={petId} 
+                  onChange={(e) => setPetId(e.target.value)} 
+                  className="w-full p-2 border rounded"
+                  required
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">Pet Name*</label>
+                <input 
+                  type="text" 
+                  value={petName} 
+                  onChange={(e) => setPetName(e.target.value)} 
+                  className="w-full p-2 border rounded"
+                  required
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">Pet Type</label>
+                <input 
+                  type="text" 
+                  value={petType} 
+                  onChange={(e) => setPetType(e.target.value)} 
+                  placeholder="Dog, Cat, Bird, etc." 
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">Breed</label>
+                <input 
+                  type="text" 
+                  value={breed} 
+                  onChange={(e) => setBreed(e.target.value)} 
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">Color</label>
+                <input 
+                  type="text" 
+                  value={color} 
+                  onChange={(e) => setColor(e.target.value)} 
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">Height</label>
+                <input 
+                  type="text" 
+                  value={height} 
+                  onChange={(e) => setHeight(e.target.value)} 
+                  placeholder="e.g., Small, Medium, Large or inches/cm" 
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">Last Seen Location</label>
+                <input 
+                  type="text" 
+                  value={location} 
+                  onChange={(e) => setLocation(e.target.value)} 
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">Category*</label>
+                <select 
+                  value={category} 
+                  onChange={(e) => setCategory(e.target.value)} 
+                  className="w-full p-2 border rounded"
+                  required
+                >
+                  <option value="Lost">Lost</option>
+                  <option value="Found">Found</option>
+                </select>
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">Date</label>
+                <input 
+                  type="date" 
+                  value={date} 
+                  onChange={(e) => setDate(e.target.value)} 
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">Area/Neighborhood</label>
+                <input 
+                  type="text" 
+                  value={area} 
+                  onChange={(e) => setArea(e.target.value)} 
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+            </div>
+            
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button 
+                type="submit" 
+                className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 disabled:opacity-50"
+                disabled={loading}
+              >
+                Register Pet
+              </button>
+              
+              <button 
+                type="button" 
+                onClick={handleGetPet} 
+                className="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 disabled:opacity-50"
+                disabled={loading || !petId}
+              >
+                Find Pet by ID
+              </button>
+              
+              <button 
+                type="button" 
+                onClick={clearForm} 
+                className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
+              >
+                Clear Form
+              </button>
+            </div>
+          </form>
+          
+          {message && (
+            <div className={`mt-4 p-3 rounded ${message.includes('successfully') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+              {message}
+            </div>
+          )}
+          
+          {selectedPet && (
+            <div className="mt-6 p-4 border rounded bg-gray-50">
+              <h3 className="text-lg font-semibold mb-2">Selected Pet Details</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <p><strong>ID:</strong> {selectedPet.id}</p>
+                <p><strong>Name:</strong> {selectedPet.name}</p>
+                <p><strong>Type:</strong> {selectedPet.petType || 'Not specified'}</p>
+                <p><strong>Breed:</strong> {selectedPet.breed || 'Not specified'}</p>
+                <p><strong>Color:</strong> {selectedPet.color || 'Not specified'}</p>
+                <p><strong>Height:</strong> {selectedPet.height || 'Not specified'}</p>
+                <p><strong>Location:</strong> {selectedPet.location || 'Not specified'}</p>
+                <p><strong>Category:</strong> {selectedPet.category}</p>
+                <p><strong>Date:</strong> {formatDate(selectedPet.date)}</p>
+                <p><strong>Area:</strong> {selectedPet.area || 'Not specified'}</p>
+              </div>
+              <button 
+                onClick={() => handleDeletePet(selectedPet.id)} 
+                className="mt-3 bg-red-500 text-white py-1 px-3 rounded hover:bg-red-600 text-sm"
+              >
+                Delete This Pet Record
+              </button>
+            </div>
+          )}
         </div>
-      )}
-
-      <h2>All Entries:</h2>
-      <ul>
-        {allEntries.map((entry, index) => (
-          <li key={index}>
-            <strong>{entry[0]}</strong>: {entry[1]}
-          </li>
-        ))}
-      </ul>
+        
+        {/* Pet Listings */}
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Pet Listings</h2>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setViewMode('all')} 
+                className={`px-3 py-1 rounded text-sm ${viewMode === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+              >
+                All
+              </button>
+              <button 
+                onClick={() => setViewMode('lost')} 
+                className={`px-3 py-1 rounded text-sm ${viewMode === 'lost' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+              >
+                Lost
+              </button>
+              <button 
+                onClick={() => setViewMode('found')} 
+                className={`px-3 py-1 rounded text-sm ${viewMode === 'found' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+              >
+                Found
+              </button>
+            </div>
+          </div>
+          
+          {loading ? (
+            <p className="text-center py-10">Loading...</p>
+          ) : allPets.length === 0 ? (
+            <p className="text-center py-10 text-gray-500">No pets found in this category</p>
+          ) : (
+            <div className="overflow-y-auto max-h-96">
+              {allPets.map((entry, index) => {
+                const pet = entry[1];
+                return (
+                  <div key={index} className="mb-3 p-3 border rounded hover:bg-gray-50">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium">{pet.name}</h3>
+                        <p className="text-sm text-gray-600">
+                          {pet.petType} {pet.breed ? `- ${pet.breed}` : ''} • {pet.color || 'No color specified'}
+                        </p>
+                        <p className="text-sm mt-1">
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${pet.category === 'Lost' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                            {pet.category}
+                          </span>
+                          {pet.date && <span className="ml-2">{formatDate(pet.date)}</span>}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {pet.area && <span>{pet.area}</span>}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => {
+                            // This approach ensures we get the complete pet object directly from the list
+                            const petToView = entry[1];
+                            setSelectedPet(petToView);
+                            setMessage('Pet details loaded from listing');
+                          }} 
+                          className="text-blue-500 hover:text-blue-700 text-sm"
+                        >
+                          View
+                        </button>
+                        <button 
+                          onClick={() => handleDeletePet(pet.id)} 
+                          className="text-red-500 hover:text-red-700 text-sm"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
-export default App; // Make sure to export the App component
+export default App;
