@@ -39,7 +39,7 @@ function App() {
   // --- UI State ---
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-
+  const [debug, setDebug] = useState(''); // Added for debugging
 
   // --- Effects ---
   useEffect(() => {
@@ -114,32 +114,37 @@ function App() {
     if (fileInputRef.current) {
       fileInputRef.current.value = ''; // Clear file input
     }
+    setDebug(''); // Clear debug info
   };
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-
+  
     const selectedFiles = files.slice(0, 5); // Limit to 5 images
     setImageFiles(prevFiles => [...prevFiles, ...selectedFiles].slice(0, 5));
-
-    const newPreviews = selectedFiles.map(file => URL.createObjectURL(file));
-    setImagePreviews(prevPreviews => [...prevPreviews, ...newPreviews].slice(0, 5));
-  };
+  
+    // Convert to data URLs instead of blob URLs
+    selectedFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreviews(prevPreviews => [...prevPreviews, e.target.result].slice(0, 5));
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 
   const removeImage = (index) => {
     setImageFiles(prev => prev.filter((_, i) => i !== index));
-    setImagePreviews(prev => {
-      URL.revokeObjectURL(prev[index]); // Clean up URL object
-      return prev.filter((_, i) => i !== index);
-    });
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
-
+  // Updated function to properly format image data for the Motoko backend
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage('Saving pet information...');
+    setDebug(''); // Clear previous debug info
 
     try {
       if (!petName || !category) {
@@ -148,14 +153,46 @@ function App() {
         return;
       }
 
-      let imageBlobs = [];
+      // Let's use a modified approach for images
+      let imageBlobs = null; // Default to null if no images
+      
       if (imageFiles.length > 0) {
         setMessage('Processing images...');
+        setDebug('Starting image processing');
+        
         try {
-          const promises = imageFiles.map(file => convertImageToBlob(file));
-          imageBlobs = await Promise.all(promises);
+          // First convert files to readable arrays
+          const imageArrays = [];
+          
+          for (const file of imageFiles) {
+            const arrayBuffer = await file.arrayBuffer();
+            // Convert ArrayBuffer to Array of Numbers (Uint8Array -> Array)
+            const uint8Array = new Uint8Array(arrayBuffer);
+            const numbersArray = Array.from(uint8Array);
+            
+            // Debug the size
+            setDebug(prev => prev + `\nProcessed image of size: ${numbersArray.length} bytes`);
+            
+            // Only store images smaller than 400KB to prevent overflow issues
+            if (numbersArray.length > 400000) {
+              setDebug(prev => prev + `\nImage too large (${numbersArray.length} bytes), skipping`);
+              continue;
+            }
+            
+            imageArrays.push(numbersArray);
+          }
+          
+          // If we have any valid images, use them
+          if (imageArrays.length > 0) {
+            imageBlobs = [imageArrays]; // Must be wrapped in an outer array to match backend type
+            setDebug(prev => prev + `\nFinal image data: ${imageArrays.length} images processed`);
+          } else {
+            imageBlobs = null;
+            setDebug(prev => prev + `\nNo valid images to upload`);
+          }
         } catch (err) {
           console.error("Error processing images:", err);
+          setDebug(prev => prev + `\nError processing images: ${err.message || err}`);
           setMessage(`Error processing images: ${err.message}`);
           setLoading(false);
           return;
@@ -172,8 +209,13 @@ function App() {
         category: category,
         date: date,
         area: area,
-        imageData: imageBlobs.length > 0 ? imageBlobs : null
+        imageData: imageBlobs
       };
+
+      setDebug(prev => prev + `\nSending pet data to backend: ${JSON.stringify({
+        ...petInput,
+        imageData: imageBlobs ? `[Array with ${imageBlobs[0].length} images]` : null
+      })}`);
 
       const generatedId = await Lost_Pet_Finder_backend.addPet(petInput);
       setMessage(`Pet information saved successfully! Assigned ID: ${generatedId}`);
@@ -181,6 +223,7 @@ function App() {
       fetchPets();
     } catch (error) {
       console.error("Error saving pet:", error);
+      setDebug(prev => prev + `\nBackend error: ${error.message || error}`);
       setMessage(`Error saving pet information: ${error.message || error}`);
     } finally {
       setLoading(false);
@@ -201,8 +244,8 @@ function App() {
       const result = await Lost_Pet_Finder_backend.getPet(searchId);
       console.log("Result from getPet:", result); // Keep this for debugging
 
-      if (result && result.length > 0) { // Add check to make sure result is not null and has elements
-        setSelectedPet(result[0]); // Access the first element - the Pet object
+      if (result) { // Simply check if result exists (it's an optional value)
+        setSelectedPet(result);
         setMessage('Pet information retrieved successfully');
       } else {
         setMessage('Pet not found');
@@ -267,10 +310,10 @@ function App() {
 
   // --- Rendering Helper Functions ---
   const renderPetImages = (pet) => {
-    if (!pet.imageData || pet.imageData.length === 0 || pet.imageData[0].length === 0) {
+    if (!pet.imageData || !pet.imageData.length || !pet.imageData[0] || pet.imageData[0].length === 0) {
       return <p className="text-gray-500 text-sm">No images available</p>;
     }
-
+  
     return (
       <div className="flex flex-wrap gap-2 mt-2">
         {pet.imageData[0].map((imgData, idx) => (
@@ -284,7 +327,6 @@ function App() {
       </div>
     );
   };
-
 
   return (
     <div className="container mx-auto p-4">

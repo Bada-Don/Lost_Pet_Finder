@@ -4,6 +4,8 @@ export const formatDate = (dateStr) => {
   };
   
   export const arrayBufferToBase64 = (buffer) => {
+    if (!buffer || !buffer.length) return '';
+    
     let binary = '';
     const bytes = new Uint8Array(buffer);
     const len = bytes.byteLength;
