@@ -154,27 +154,34 @@ function App() {
   };
 
   // Handle get pet by ID (existing handleGetPet function)
-  const handleGetPet = async () => { /* ... existing handleGetPet function ... */
+  const handleGetPet = async () => {
     if (!searchId) {
       setMessage('Please enter a pet ID to search');
       return;
     }
-
+  
     setLoading(true);
     setMessage('Retrieving pet information...');
-
+    console.log("handleGetPet: Searching for pet ID:", searchId);
+  
     try {
+      console.log("handleGetPet: Calling backend getPet with ID:", searchId);
       const result = await Lost_Pet_Finder_backend.getPet(searchId);
-
+      console.log("handleGetPet: Backend getPet result:", result);
+  
       if (!result) {
         setMessage('Pet not found');
         setSelectedPet(null);
+        console.log("handleGetPet: Pet not found in backend");
       } else {
-        setSelectedPet(result);
+        // Check if result is an array and extract the first element
+        const petObject = Array.isArray(result) ? result[0] : result;
+        setSelectedPet(petObject);
         setMessage('Pet information retrieved successfully');
+        console.log("handleGetPet: Pet found and set:", petObject);
       }
     } catch (error) {
-      console.error("Error retrieving pet:", error);
+      console.error("handleGetPet: Error retrieving pet:", error);
       setMessage(`Error retrieving pet information: ${error.message || error}`);
       setSelectedPet(null);
     } finally {
