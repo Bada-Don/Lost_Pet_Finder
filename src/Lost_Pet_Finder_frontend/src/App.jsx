@@ -172,7 +172,7 @@ function App() {
         category: category,
         date: date,
         area: area,
-        imageData: imageBlobs.length > 0 ? [imageBlobs] : null
+        imageData: imageBlobs.length > 0 ? imageBlobs : null
       };
 
       const generatedId = await Lost_Pet_Finder_backend.addPet(petInput);

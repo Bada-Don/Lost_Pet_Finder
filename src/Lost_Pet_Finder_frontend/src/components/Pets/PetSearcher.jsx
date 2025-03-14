@@ -29,13 +29,13 @@ const PetSearcher = ({
           </button>
         </div>
       </div>
-      
+
       {message && (
         <div className={`mt-4 p-3 rounded ${message.includes('successfully') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
           {message}
         </div>
       )}
-      
+
       {selectedPet && (
         <div className="mt-6 p-4 border rounded bg-gray-50">
           <h3 className="text-lg font-semibold mb-2">Selected Pet Details</h3>
@@ -51,12 +51,12 @@ const PetSearcher = ({
             <p><strong>Date:</strong> {formatDate(selectedPet.date)}</p>
             <p><strong>Area:</strong> {selectedPet.area || 'Not specified'}</p>
           </div>
-          
+
           <div className="mt-3">
             <p className="font-medium">Images:</p>
             {renderPetImages(selectedPet)}
           </div>
-          
+
           {loggedInUser && (
             <button
               onClick={() => handleDeletePet(selectedPet.id)}
