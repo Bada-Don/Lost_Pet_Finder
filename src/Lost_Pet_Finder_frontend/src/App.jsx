@@ -254,24 +254,26 @@ function App() {
       setMessage('Please enter a pet ID to search');
       return;
     }
-
+  
     setLoading(true);
     setMessage('Retrieving pet information...');
-
+  
     try {
       const result = await Lost_Pet_Finder_backend.getPet(searchId);
       console.log("Raw result from getPet:", result);
-
+  
       if (result) {
         // Fix: Check if the result is an array and extract the first item
         const petData = Array.isArray(result) ? result[0] : result;
-
+  
         console.log("Pet data extracted:", petData);
-        console.log("Date value:", petData?.date);
-
+  
         if (petData) {
           setSelectedPet(petData);
           setMessage('Pet information retrieved successfully');
+          
+          // Fetch messages for this pet
+          fetchPetMessages(petData.id);
         } else {
           setMessage('Pet not found or data structure unexpected');
           setSelectedPet(null);
@@ -343,24 +345,37 @@ function App() {
     setMessagingLoading(true);
     try {
       const messages = await Lost_Pet_Finder_backend.getUserMessages();
-      setUserMessages(messages.map(msg => ({
-        ...msg,
-        contactName: msg.isSent ? 'To User' : 'From User' // Placeholder, improve this with actual usernames if available
-      })));
+      console.log("User messages fetched:", messages); // Debug log
+      
+      // Process messages to determine if they are sent or received
+      const processedMessages = messages.map(msg => {
+        // Determine if message was sent by current user
+        const isSent = msg.fromUser.toString() === msg.caller?.toString();
+        
+        return {
+          ...msg,
+          isSent,
+          contactName: isSent ? 'To User' : 'From User' // Placeholder
+        };
+      });
+      
+      setUserMessages(processedMessages);
     } catch (error) {
+      console.error("Error fetching messages:", error);
       setMessage(`Error fetching messages: ${error.message || error}`);
     } finally {
       setMessagingLoading(false);
     }
   };
-
-  const fetchPetMessages = async (petId, petOwner) => {
-    if (!loggedInUser || !petId || !petOwner) return;
+  const fetchPetMessages = async (petId) => {
+    if (!loggedInUser || !petId) return;
     setMessagingLoading(true);
     try {
       const messages = await Lost_Pet_Finder_backend.getMessagesForPet(petId);
+      console.log("Pet messages fetched:", messages); // Debug log
       setPetMessages(messages);
     } catch (error) {
+      console.error("Error fetching pet messages:", error);
       setMessage(`Error fetching pet messages: ${error.message || error}`);
     } finally {
       setMessagingLoading(false);
@@ -373,21 +388,33 @@ function App() {
       setMessage('Please log in to send messages.');
       return;
     }
+    
+    console.log("Sending message:", { petId, toUserPrincipal, content });
     setMessagingLoading(true);
+    
     try {
+      // Convert the principal string to a Principal object if needed
+      let principalObj = toUserPrincipal;
+      if (typeof toUserPrincipal === 'string') {
+        principalObj = Principal.fromText(toUserPrincipal);
+      }
+      
       const result = await Lost_Pet_Finder_backend.sendMessage({
         petId: petId,
-        toUser: Principal.fromText(toUserPrincipal), // Ensure toUser is Principal
+        toUser: principalObj,
         content: content,
       });
+      
       if ('ok' in result) {
         setMessage('Message sent successfully!');
-        fetchPetMessages(petId, toUserPrincipal); // Refresh pet messages after sending
-        fetchUserMessages(); // Refresh user inbox as well
+        // Refresh messages after sending
+        fetchPetMessages(petId);
+        fetchUserMessages();
       } else {
         setMessage(`Failed to send message: ${result.err}`);
       }
     } catch (error) {
+      console.error("Error sending message:", error);
       setMessage(`Error sending message: ${error.message || error}`);
     } finally {
       setMessagingLoading(false);
@@ -411,9 +438,9 @@ function App() {
     }
   };
 
-  const handleViewPetFromInbox = (petId) => {
+  const handleViewPetFromInbox = async (petId) => {
     setSearchId(petId);
-    handleGetPet(); // Automatically fetch and display pet details
+    await handleGetPet(); // Automatically fetch and display pet details
   };
 
 
