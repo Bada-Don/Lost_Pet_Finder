@@ -169,6 +169,10 @@ function App() {
   // Updated function to properly format image data for the Motoko backend
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!loggedInUser) {
+      setMessage('You must be logged in to register a pet.');
+      return;
+    }
     setLoading(true);
     setMessage('Saving pet information...');
     setDebug(''); // Clear previous debug info
@@ -188,8 +192,7 @@ function App() {
         setDebug('Starting image processing');
 
         try {
-          // First convert files to readable arrays
-          const imageArrays = [];
+          const imageArrays = []; // Initialize imageArrays here
 
           for (const file of imageFiles) {
             const arrayBuffer = await file.arrayBuffer();
