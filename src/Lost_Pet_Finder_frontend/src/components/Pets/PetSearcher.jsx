@@ -69,9 +69,9 @@ const PetSearcher = ({
                 Delete This Pet Record
               </button>
             )}
-            
+
             {/* Only show contact button if the user is logged in and not the owner */}
-            {loggedInUser && selectedPet.owner.toString() !== loggedInUser.toString() && (
+            {loggedInUser && selectedPet.owner.toString() !== loggedInUser.principal && (
               <button
                 onClick={() => setShowMessages(true)}
                 className="bg-blue-500 text-white py-1 px-3 rounded hover:bg-blue-600 text-sm"

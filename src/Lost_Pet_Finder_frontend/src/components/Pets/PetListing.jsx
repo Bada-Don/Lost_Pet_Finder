@@ -94,12 +94,12 @@ const PetListing = ({
                     >
                       View
                     </button>
-                    {loggedInUser && (
+                    {loggedInUser && selectedPet.owner.toString() === loggedInUser.principal && (
                       <button
-                        onClick={() => handleDeletePet(pet.id)}
-                        className="text-red-500 hover:text-red-700 text-sm"
+                        onClick={() => handleDeletePet(selectedPet.id)}
+                        className="bg-red-500 text-white py-1 px-3 rounded hover:bg-red-600 text-sm"
                       >
-                        Delete
+                        Delete This Pet Record
                       </button>
                     )}
                   </div>

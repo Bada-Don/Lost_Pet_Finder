@@ -92,7 +92,16 @@ function App() {
       const result = await Lost_Pet_Finder_backend.loginUser(username, passwordHash);
       if ('ok' in result) {
         setAuthMessage(result.ok);
-        setLoggedInUser(username); // Storing username for simplicity, consider Principal in real app
+        
+        // Get the user's Principal and store it along with username
+        const authActor = await Lost_Pet_Finder_backend;
+        const userPrincipal = await authActor.getOwnPrincipal();
+        
+        setLoggedInUser({
+          username: username,
+          principal: userPrincipal.toString()
+        });
+        
         setUsername('');
         setPassword('');
         setEmail('');
@@ -347,15 +356,24 @@ function App() {
       const messages = await Lost_Pet_Finder_backend.getUserMessages();
       console.log("User messages fetched:", messages); // Debug log
       
+      // Get the current user's Principal (needed to properly identify sent messages)
+      const authActor = await Lost_Pet_Finder_backend;
+      const myPrincipal = authActor.getOwnPrincipal ? 
+        await authActor.getOwnPrincipal() : 
+        null;
+      
       // Process messages to determine if they are sent or received
       const processedMessages = messages.map(msg => {
-        // Determine if message was sent by current user
-        const isSent = msg.fromUser.toString() === msg.caller?.toString();
+        // Determine if message was sent by current user by comparing principals
+        const isSent = myPrincipal && 
+          myPrincipal.toString() === msg.fromUser.toString();
         
         return {
           ...msg,
           isSent,
-          contactName: isSent ? 'To User' : 'From User' // Placeholder
+          contactName: isSent ? 
+            msg.toUser.toString().slice(0, 8) + '...' : 
+            msg.fromUser.toString().slice(0, 8) + '...'
         };
       });
       

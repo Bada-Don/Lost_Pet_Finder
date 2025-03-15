@@ -14,7 +14,7 @@ const AuthComponent = ({
       <h2 className="text-xl font-semibold mb-4">{isRegistering ? 'Register' : 'Login'}</h2>
       {loggedInUser ? (
         <div>
-          <p>Logged in as: <strong>{loggedInUser}</strong></p>
+          <p>Logged in as: <strong>{loggedInUser.username}</strong></p>
           <button onClick={handleLogout} className="bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-600 mt-2">
             Logout
           </button>
@@ -25,47 +25,47 @@ const AuthComponent = ({
           <form onSubmit={isRegistering ? handleRegister : handleLogin}>
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">Username</label>
-              <input 
-                type="text" 
-                value={username} 
-                onChange={(e) => setUsername(e.target.value)} 
-                className="w-full p-2 border rounded" 
-                required 
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full p-2 border rounded"
+                required
               />
             </div>
             {isRegistering && (
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1">Email</label>
-                <input 
-                  type="email" 
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)} 
-                  className="w-full p-2 border rounded" 
-                  required 
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full p-2 border rounded"
+                  required
                 />
               </div>
             )}
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">Password</label>
-              <input 
-                type="password" 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
-                className="w-full p-2 border rounded" 
-                required 
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full p-2 border rounded"
+                required
               />
             </div>
             <div className="mt-4 flex gap-2">
-              <button 
-                type="submit" 
-                className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 disabled:opacity-50" 
+              <button
+                type="submit"
+                className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 disabled:opacity-50"
                 disabled={loading}
               >
                 {loading ? 'Processing...' : isRegistering ? 'Register' : 'Login'}
               </button>
-              <button 
-                type="button" 
-                onClick={() => setIsRegistering(!isRegistering)} 
+              <button
+                type="button"
+                onClick={() => setIsRegistering(!isRegistering)}
                 className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
               >
                 {isRegistering ? 'Switch to Login' : 'Switch to Register'}
