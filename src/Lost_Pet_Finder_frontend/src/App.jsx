@@ -9,7 +9,7 @@ import PetSearcher from './components/Pets/PetSearcher';
 import InboxComponent from './components/Messages/InboxComponent.jsx'; // Import InboxComponent
 import MessageComponent from './components/Messages/MessageComponent.jsx'; // Ensure MessageComponent is correctly imported
 import { arrayBufferToBase64, formatDate, convertImageToBlob } from './utils/helpers';
-
+// comment by jay -> going to change the structure of this project.
 function App() {
   // --- Authentication State ---
   const [username, setUsername] = useState('');
