@@ -258,6 +258,98 @@ function App() {
   //     setLoading(false);
   //   }
   // };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!loggedInUser) {
+      setMessage('You must be logged in to register a pet.');
+      return;
+    }
+    setLoading(true);
+    setMessage('Saving pet information...');
+    setDebug(''); // Clear previous debug info
+
+    try {
+      if (!petName || !category) {
+        setMessage('Name and Category are required fields');
+        setLoading(false);
+        return;
+      }
+
+      // Let's use a modified approach for images
+      let imageBlobs = null; // Default to null if no images
+
+      if (imageFiles.length > 0) {
+        setMessage('Processing images...');
+        setDebug('Starting image processing');
+
+        try {
+          const imageArrays = []; // Initialize imageArrays here
+
+          for (const file of imageFiles) {
+            const arrayBuffer = await file.arrayBuffer();
+            // Convert ArrayBuffer to Array of Numbers (Uint8Array -> Array)
+            const uint8Array = new Uint8Array(arrayBuffer);
+            const numbersArray = Array.from(uint8Array);
+
+            // Debug the size
+            setDebug(prev => prev + `\nProcessed image of size: ${numbersArray.length} bytes`);
+
+            // Only store images smaller than 400KB to prevent overflow issues
+            if (numbersArray.length > 400000) {
+              setDebug(prev => prev + `\nImage too large (${numbersArray.length} bytes), skipping`);
+              continue;
+            }
+
+            imageArrays.push(numbersArray);
+          }
+
+          // If we have any valid images, use them
+          if (imageArrays.length > 0) {
+            imageBlobs = [imageArrays]; // Must be wrapped in an outer array to match backend type
+            setDebug(prev => prev + `\nFinal image data: ${imageArrays.length} images processed`);
+          } else {
+            imageBlobs = null;
+            setDebug(prev => prev + `\nNo valid images to upload`);
+          }
+        } catch (err) {
+          console.error("Error processing images:", err);
+          setDebug(prev => prev + `\nError processing images: ${err.message || err}`);
+          setMessage(`Error processing images: ${err.message}`);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const petInput = {
+        name: petName,
+        petType: petType,
+        breed: breed,
+        color: color,
+        height: height,
+        location: location,
+        category: category,
+        date: date,
+        area: area,
+        imageData: imageBlobs
+      };
+
+      setDebug(prev => prev + `\nSending pet data to backend: ${JSON.stringify({
+        ...petInput,
+        imageData: imageBlobs ? `[Array with ${imageBlobs[0].length} images]` : null
+      })}`);
+
+      const generatedId = await Lost_Pet_Finder_backend.addPet(petInput);
+      setMessage(`Pet information saved successfully! Assigned ID: ${generatedId}`);
+      clearForm();
+      fetchPets();
+    } catch (error) {
+      console.error("Error saving pet:", error);
+      setDebug(prev => prev + `\nBackend error: ${error.message || error}`);
+      setMessage(`Error saving pet information: ${error.message || error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // --- Pet Search Handlers ---
   // const handleGetPet = async () => {
