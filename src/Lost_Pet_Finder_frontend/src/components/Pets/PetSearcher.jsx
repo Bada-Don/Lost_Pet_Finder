@@ -71,14 +71,19 @@ const PetSearcher = ({
             )}
 
             {/* Only show contact button if the user is logged in and not the owner */}
-            {loggedInUser && selectedPet.owner.toString() !== loggedInUser.principal && (
-              <button
-                onClick={() => setShowMessages(true)}
-                className="bg-blue-500 text-white py-1 px-3 rounded hover:bg-blue-600 text-sm"
-              >
-                Contact Owner
-              </button>
-            )}
+            {loggedInUser &&
+              selectedPet &&
+              selectedPet.owner &&
+              selectedPet.owner.toString &&
+              loggedInUser.principal &&
+              selectedPet.owner.toString() !== loggedInUser.principal && (
+                <button
+                  onClick={() => setShowMessages(true)}
+                  className="bg-blue-500 text-white py-1 px-3 rounded hover:bg-blue-600 text-sm"
+                >
+                  Contact Owner
+                </button>
+              )}
           </div>
 
           {/* Messaging component */}

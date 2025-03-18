@@ -14,37 +14,37 @@ const PetListing = () => {
     setMessage,
     setLoading,
     // handleDeletePet,
-    loggedInUser }=useAppContext()
+    loggedInUser } = useAppContext()
 
-    //functions
-    const handleDeletePet = async (id) => {
-        if (!id) {
-          setMessage('No pet ID specified for deletion');
-          return;
-        }
-        if (!window.confirm(`Are you sure you want to delete pet with ID ${id}?`)) {
-          return;
-        }
-    
-        setLoading(true);
-        setMessage('Deleting pet information...');
-    
-        try {
-          const result = await Lost_Pet_Finder_backend.deletePet(id);
-          if ('ok' in result) {
-            setMessage('Pet information deleted successfully!');
-            setSelectedPet(null);
-            fetchPets();
-          } else {
-            setMessage(`Error deleting pet information: ${result.err}`);
-          }
-        } catch (error) {
-          setMessage(`Error deleting pet information: ${error.message || error}`);
-        } finally {
-          setLoading(false);
-        }
-      };
-    
+  //functions
+  const handleDeletePet = async (id) => {
+    if (!id) {
+      setMessage('No pet ID specified for deletion');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to delete pet with ID ${id}?`)) {
+      return;
+    }
+
+    setLoading(true);
+    setMessage('Deleting pet information...');
+
+    try {
+      const result = await Lost_Pet_Finder_backend.deletePet(id);
+      if ('ok' in result) {
+        setMessage('Pet information deleted successfully!');
+        setSelectedPet(null);
+        fetchPets();
+      } else {
+        setMessage(`Error deleting pet information: ${result.err}`);
+      }
+    } catch (error) {
+      setMessage(`Error deleting pet information: ${error.message || error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
@@ -128,14 +128,19 @@ const PetListing = () => {
                     >
                       View
                     </button>
-                    {loggedInUser && selectedPet.owner.toString() === loggedInUser.principal && (
-                      <button
-                        onClick={() => handleDeletePet(selectedPet.id)}
-                        className="bg-red-500 text-white py-1 px-3 rounded hover:bg-red-600 text-sm"
-                      >
-                        Delete This Pet Record
-                      </button>
-                    )}
+                    {loggedInUser &&
+                      selectedPet &&
+                      selectedPet.owner &&
+                      selectedPet.owner.toString &&
+                      loggedInUser.principal &&
+                      selectedPet.owner.toString() === loggedInUser.principal && (
+                        <button
+                          onClick={() => handleDeletePet(selectedPet.id)}
+                          className="bg-red-500 text-white py-1 px-3 rounded hover:bg-red-600 text-sm"
+                        >
+                          Delete This Pet Record
+                        </button>
+                      )}
                   </div>
                 </div>
               </div>

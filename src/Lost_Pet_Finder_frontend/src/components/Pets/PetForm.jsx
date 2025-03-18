@@ -19,11 +19,12 @@ const PetForm = () => {
     setLoading, setMessage, setDebug,
     viewMode, setViewMode,
     allPets, setAllPets
-    
+
   } = useAppContext();
 
 
   //functions
+  // Update the handleSubmit function in PetForm.jsx
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -37,7 +38,9 @@ const PetForm = () => {
         return;
       }
 
-      let imageBlobs = null;
+      // Initialize with empty array instead of null
+      let imageBlobs = [];
+
       if (imageFiles.length > 0) {
         setMessage('Processing images...');
         setDebug('Starting image processing');
@@ -72,7 +75,7 @@ const PetForm = () => {
         category,
         date,
         area,
-        imageData:imageBlobs
+        imageData: imageBlobs // Now this will be an empty array if no images were uploaded
       };
 
       const generatedId = await Lost_Pet_Finder_backend.addPet(petInput);
@@ -121,23 +124,23 @@ const PetForm = () => {
   };
 
   const fetchPets = async () => {
-      setLoading(true);
-      try {
-        let pets = [];
-        if (viewMode === 'lost') {
-          pets = await Lost_Pet_Finder_backend.getPetsByCategory('Lost');
-        } else if (viewMode === 'found') {
-          pets = await Lost_Pet_Finder_backend.getPetsByCategory('Found');
-        } else {
-          pets = await Lost_Pet_Finder_backend.getAllPets();
-        }
-        setAllPets(pets);
-      } catch (error) {
-        setMessage(`Error fetching pets: ${error.message || error}`);
-      } finally {
-        setLoading(false);
+    setLoading(true);
+    try {
+      let pets = [];
+      if (viewMode === 'lost') {
+        pets = await Lost_Pet_Finder_backend.getPetsByCategory('Lost');
+      } else if (viewMode === 'found') {
+        pets = await Lost_Pet_Finder_backend.getPetsByCategory('Found');
+      } else {
+        pets = await Lost_Pet_Finder_backend.getAllPets();
       }
-    };
+      setAllPets(pets);
+    } catch (error) {
+      setMessage(`Error fetching pets: ${error.message || error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
@@ -249,7 +252,7 @@ const PetForm = () => {
                     <img
                       src={preview}
                       alt={'preview ${index}'}
-                    className="w-20 h-20 object-cover rounded"
+                      className="w-20 h-20 object-cover rounded"
                     />
                     <button
                       type="button"
