@@ -1,13 +1,144 @@
 import React from 'react';
+import { useAppContext } from '../../context/AppContext';
+import { Lost_Pet_Finder_backend } from '../../../../declarations/Lost_Pet_Finder_backend';
 
-const PetForm = ({
-  handleSubmit, handleImageChange, removeImage,
-  petName, setPetName, petType, setPetType,
-  breed, setBreed, color, setColor, height, setHeight,
-  location, setLocation, category, setCategory,
-  date, setDate, area, setArea,
-  imagePreviews, fileInputRef, loading, clearForm
-}) => {
+const PetForm = () => {
+  const {
+    petName, setPetName,
+    petType, setPetType,
+    breed, setBreed,
+    color, setColor,
+    height, setHeight,
+    location, setLocation,
+    category, setCategory,
+    date, setDate,
+    area, setArea,
+    imagePreviews, setImagePreviews,
+    fileInputRef, loading,
+    imageFiles, setImageFiles,
+    setLoading, setMessage, setDebug,
+    viewMode, setViewMode,
+    allPets, setAllPets
+    
+  } = useAppContext();
+
+
+  //functions
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('Saving pet information...');
+    setDebug('');
+
+    try {
+      if (!petName || !category) {
+        setMessage('Name and Category are required fields');
+        setLoading(false);
+        return;
+      }
+
+      let imageBlobs = null;
+      if (imageFiles.length > 0) {
+        setMessage('Processing images...');
+        setDebug('Starting image processing');
+        try {
+          const imageArrays = [];
+          for (const file of imageFiles) {
+            const arrayBuffer = await file.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
+            const numbersArray = Array.from(uint8Array);
+
+            if (numbersArray.length > 400000) continue;
+            imageArrays.push(numbersArray);
+          }
+          if (imageArrays.length > 0) {
+            imageBlobs = [imageArrays];
+          }
+        } catch (err) {
+          console.error('Error processing images:', err);
+          setMessage(`Error processing images: ${err.message}`);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const petInput = {
+        name: petName,
+        petType,
+        breed,
+        color,
+        height,
+        location,
+        category,
+        date,
+        area,
+        imageData:imageBlobs
+      };
+
+      const generatedId = await Lost_Pet_Finder_backend.addPet(petInput);
+      setMessage(`Pet information saved successfully! Assigned ID: ${generatedId}`);
+      clearForm();
+      fetchPets();
+    } catch (error) {
+      console.error('Error saving pet:', error);
+      setMessage(`Error saving pet information: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files).slice(0, 5);
+    setImageFiles((prevFiles) => [...prevFiles, ...files].slice(0, 5));
+
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreviews((prevPreviews) => [...prevPreviews, e.target.result].slice(0, 5));
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index) => {
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const clearForm = () => {
+    setPetName('');
+    setPetType('');
+    setBreed('');
+    setColor('');
+    setHeight('');
+    setLocation('');
+    setCategory('Lost');
+    setDate('');
+    setArea('');
+    setImageFiles([]);
+    setImagePreviews([]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const fetchPets = async () => {
+      setLoading(true);
+      try {
+        let pets = [];
+        if (viewMode === 'lost') {
+          pets = await Lost_Pet_Finder_backend.getPetsByCategory('Lost');
+        } else if (viewMode === 'found') {
+          pets = await Lost_Pet_Finder_backend.getPetsByCategory('Found');
+        } else {
+          pets = await Lost_Pet_Finder_backend.getAllPets();
+        }
+        setAllPets(pets);
+      } catch (error) {
+        setMessage(`Error fetching pets: ${error.message || error}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-xl font-semibold mb-4">Register a Pet</h2>
@@ -117,8 +248,8 @@ const PetForm = ({
                   <div key={index} className="relative">
                     <img
                       src={preview}
-                      alt={`Preview ${index}`}
-                      className="w-20 h-20 object-cover rounded"
+                      alt={'preview ${index}'}
+                    className="w-20 h-20 object-cover rounded"
                     />
                     <button
                       type="button"
@@ -154,4 +285,4 @@ const PetForm = ({
   );
 };
 
-export default PetForm;
+export default PetForm; 
