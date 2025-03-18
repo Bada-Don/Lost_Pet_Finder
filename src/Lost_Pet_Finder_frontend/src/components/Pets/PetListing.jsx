@@ -1,17 +1,51 @@
 import React from 'react';
 import { arrayBufferToBase64, formatDate } from '../../utils/helpers';
+import { useAppContext } from '../../context/AppContext';
+import { Lost_Pet_Finder_backend } from '../../../../declarations/Lost_Pet_Finder_backend'
 
-const PetListing = ({
-  allPets,
-  viewMode,
-  setViewMode,
-  loading,
-  setSelectedPet,
-  setSearchId,
-  setMessage,
-  handleDeletePet,
-  loggedInUser
-}) => {
+const PetListing = () => {
+  const { allPets,
+    viewMode,
+    setViewMode,
+    loading,
+    setSelectedPet,
+    selectedPet,
+    setSearchId,
+    setMessage,
+    setLoading,
+    // handleDeletePet,
+    loggedInUser }=useAppContext()
+
+    //functions
+    const handleDeletePet = async (id) => {
+        if (!id) {
+          setMessage('No pet ID specified for deletion');
+          return;
+        }
+        if (!window.confirm(`Are you sure you want to delete pet with ID ${id}?`)) {
+          return;
+        }
+    
+        setLoading(true);
+        setMessage('Deleting pet information...');
+    
+        try {
+          const result = await Lost_Pet_Finder_backend.deletePet(id);
+          if ('ok' in result) {
+            setMessage('Pet information deleted successfully!');
+            setSelectedPet(null);
+            fetchPets();
+          } else {
+            setMessage(`Error deleting pet information: ${result.err}`);
+          }
+        } catch (error) {
+          setMessage(`Error deleting pet information: ${error.message || error}`);
+        } finally {
+          setLoading(false);
+        }
+      };
+    
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
       <div className="flex justify-between items-center mb-4">
