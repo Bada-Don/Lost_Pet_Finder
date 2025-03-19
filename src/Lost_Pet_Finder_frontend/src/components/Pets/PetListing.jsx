@@ -5,6 +5,7 @@ import { Lost_Pet_Finder_backend } from '../../../../declarations/Lost_Pet_Finde
 
 const PetListing = () => {
   const { allPets,
+    setAllPets,
     viewMode,
     setViewMode,
     loading,
@@ -40,6 +41,25 @@ const PetListing = () => {
       }
     } catch (error) {
       setMessage(`Error deleting pet information: ${error.message || error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPets = async () => {
+    setLoading(true);
+    try {
+      let pets = [];
+      if (viewMode === 'lost') {
+        pets = await Lost_Pet_Finder_backend.getPetsByCategory('Lost');
+      } else if (viewMode === 'found') {
+        pets = await Lost_Pet_Finder_backend.getPetsByCategory('Found');
+      } else {
+        pets = await Lost_Pet_Finder_backend.getAllPets();
+      }
+      setAllPets(pets);
+    } catch (error) {
+      setMessage(`Error fetching pets: ${error.message || error}`);
     } finally {
       setLoading(false);
     }
